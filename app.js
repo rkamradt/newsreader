@@ -21,7 +21,7 @@ const newsapiurl = `${NEWSAPI_SERVER}${NEWSAPI_PATH}`;
   })
 
   try {
-    console.log(`Connecting to ${mongourl}`)
+    console.log(`Connecting to mongodb://${MONGO_USER}:******@${MONGO_SERVER}:${MONGO_PORT})
     await client.connect()
     console.log('Connected correctly to server')
 

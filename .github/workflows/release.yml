@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: tag
+        run: echo "tag=sha-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
+
+      - name: Update helm chart version
+        run: |
+          git clone https://x-access-token:${{ secrets.HELM_CHARTS_PAT }}@github.com/rkamradt/rkamradt-helm-charts.git
+          cd rkamradt-helm-charts
+          printf 'image:\n  tag: "%s"\n' "${{ steps.tag.outputs.tag }}" > newsreader/version-values.yaml
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add newsreader/version-values.yaml
+          git commit -m "Update newsreader image tag to ${{ steps.tag.outputs.tag }}"
+          git push
